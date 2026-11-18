@@ -60,8 +60,12 @@ export function createCity(scene, rng) {
   scene.add(ground);
 
   // ---- Roads: asphalt strips along every grid line. ----
+  // Dashes are painted along the canvas vertical; the east-west roads get a
+  // texture rotated 90 degrees so their dashes run along the road too.
   const asphaltX = asphaltTexture();
   asphaltX.repeat.set(10, 1);
+  asphaltX.center.set(0.5, 0.5);
+  asphaltX.rotation = Math.PI / 2;
   const asphaltZ = asphaltTexture();
   asphaltZ.repeat.set(10, 1);
   const roadMatX = new THREE.MeshLambertMaterial({ map: asphaltX });
@@ -71,7 +75,6 @@ export function createCity(scene, rng) {
   for (const line of lines) {
     const roadX = new THREE.Mesh(roadGeoX, roadMatX);
     roadX.rotation.x = -Math.PI / 2;
-    roadX.rotation.z = Math.PI / 2; // dashes run along the road
     roadX.position.set(0, 0.01, line);
     scene.add(roadX);
     const roadZ = new THREE.Mesh(roadGeoZ, roadMatZ);

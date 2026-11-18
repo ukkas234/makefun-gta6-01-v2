@@ -23,9 +23,11 @@ export const BUILDINGS = {
   maxPerBlock: 4,
   minHeight: 8,
   maxHeight: 60,
-  /** Fraction of a block a building footprint may cover (per axis). */
+  /** Fraction of a block a building footprint may cover (per axis).
+   * Capped so a building in a quadrant (offset 10 from block centre) never
+   * spills past the block edge into the road: 10 + 40*0.47/2 = 19.4 < 20. */
   minFootprint: 0.32,
-  maxFootprint: 0.62,
+  maxFootprint: 0.47,
 };
 
 /** Fixed simulation step: 60 updates a second whatever the display rate. */
