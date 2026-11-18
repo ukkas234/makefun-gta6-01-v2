@@ -131,7 +131,13 @@ M2.update = function (dt, game) {
     this._failed = true;
     say(game, 'M2 failed: out of time. Try again from the pause menu.');
   } else if (this._count < DELIVERY_POINTS.length) {
-    setObj(game, `Deliver package ${this._count + 1}/3 — ${Math.ceil(this._timer)}s left`);
+    // Only touch the objective text when the displayed second changes —
+    // rewriting it 60x/s is wasted DOM work.
+    const shown = Math.ceil(this._timer);
+    if (shown !== this._lastShown) {
+      this._lastShown = shown;
+      setObj(game, `Deliver package ${this._count + 1}/3 — ${shown}s left`);
+    }
   }
 };
 

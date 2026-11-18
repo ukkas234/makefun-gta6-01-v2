@@ -149,6 +149,12 @@ export function createHUD() {
     ctx.fillText('N', 6, 13);
   }
 
+  function setText(node, value) {
+    // The HUD updates every frame; only write to the DOM when the text
+    // actually changed, so layout/paint work stays cheap.
+    if (node.textContent !== value) node.textContent = value;
+  }
+
   function showMessage(text) {
     if (!text) return;
     messages.push(String(text));
@@ -181,17 +187,17 @@ export function createHUD() {
     const health = Math.max(0, Math.min(100, Math.round(state.health ?? 100)));
     healthBar.style.width = `${health}%`;
     healthBar.style.background = health > 50 ? '#37c978' : health > 25 ? '#f2a93b' : '#e5534b';
-    healthText.textContent = String(health);
+    setText(healthText, String(health));
 
     const wanted = Math.max(0, Math.min(5, Math.round(state.wanted ?? 0)));
-    stars.textContent = '★'.repeat(wanted) + '☆'.repeat(5 - wanted);
+    setText(stars, '★'.repeat(wanted) + '☆'.repeat(5 - wanted));
     stars.style.color = wanted > 0 ? '#ffd23f' : '#8b93a3';
 
-    cash.textContent = `$${Math.floor(state.money ?? 0).toLocaleString('en-US')}`;
-    clockEl.textContent = formatClock(state.clock);
+    setText(cash, `$${Math.floor(state.money ?? 0).toLocaleString('en-US')}`);
+    setText(clockEl, formatClock(state.clock));
     const speed = state.speed || 0;
-    speedEl.textContent = speed > 0.5 ? `${Math.round(speed * 3.6)} km/h` : '';
-    muteEl.textContent = state.muted ? 'MUTED (M)' : '';
+    setText(speedEl, speed > 0.5 ? `${Math.round(speed * 3.6)} km/h` : '');
+    setText(muteEl, state.muted ? 'MUTED (M)' : '');
     crosshair.style.display = state.armed ? '' : 'none';
     drawMinimap(state.minimap || null);
   }
