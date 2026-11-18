@@ -1,61 +1,202 @@
-// Every tuning number and colour in one place. The playfield is a fixed 1280x720 logical area;
-// the renderer scales it to the window, so no rule below depends on the screen size.
+// Solmara — every tuning number, colour and key binding in one place.
+// The city is a fixed 10x10 block grid; nothing below depends on the screen size.
 
-export const FIELD = { width: 1280, height: 720, groundY: 664 };
+/** City layout: 10 blocks of 40 m, roads 12 m wide, grid step 52 m. */
+export const CITY = {
+  blocks: 10,
+  blockSize: 40,
+  roadWidth: 12,
+  step: 52,
+  /** Half the full city extent: roads run from -260 to +260 on both axes. */
+  half: 260,
+  /** Coast: sand starts at the south edge, water beyond it. */
+  beachStart: 260,
+  beachDepth: 44,
+  waterStart: 304,
+  /** Low-poly hills ring the city beyond this radius. */
+  hillsStart: 300,
+};
 
-/** The simulation's fixed step, in seconds: 60 updates a second whatever the display's rate. */
+/** Building generation bounds. */
+export const BUILDINGS = {
+  minPerBlock: 1,
+  maxPerBlock: 4,
+  minHeight: 8,
+  maxHeight: 60,
+  /** Fraction of a block a building footprint may cover (per axis). */
+  minFootprint: 0.32,
+  maxFootprint: 0.62,
+};
+
+/** Fixed simulation step: 60 updates a second whatever the display rate. */
 export const STEP = 1 / 60;
 
+/** Key bindings (KeyboardEvent.code values). */
+export const KEYS = {
+  up: 'KeyW',
+  down: 'KeyS',
+  left: 'KeyA',
+  right: 'KeyD',
+  run: 'ShiftLeft',
+  runAlt: 'ShiftRight',
+  jump: 'Space',
+  punch: 'KeyF',
+  weapon: 'KeyQ',
+  enter: 'KeyE',
+  resetCar: 'KeyR',
+  mute: 'KeyM',
+  pause: 'KeyP',
+  pauseAlt: 'Escape',
+  confirm: 'Enter',
+};
+
+/** On-foot player tuning. */
 export const PLAYER = {
-  width: 72,
-  height: 24,
-  speed: 560,
-  invulnerable: 1.5,
+  walkSpeed: 5,
+  runSpeed: 9,
+  jumpSpeed: 7,
+  gravity: 22,
+  radius: 0.45,
+  maxHealth: 100,
+  punchRange: 1.8,
+  punchDamage: 25,
+  punchCooldown: 0.45,
+  /** Seconds a police officer must stay within bust range to bust the player. */
+  bustHoldTime: 2,
+  bustRange: 2,
 };
 
-export const LIVES = 3;
-
-export const BLOCK = {
-  minWidth: 40,
-  maxWidth: 110,
-  height: 36,
-  speed: 240,
-  speedPerLevel: 30,
-  speedJitter: 90,
-  interval: 0.55,
-  intervalScale: 0.88,
-  minInterval: 0.14,
-  dodgePoints: 1,
+/** Pistol tuning (hitscan, infinite ammo). */
+export const PISTOL = {
+  damage: 34,
+  range: 60,
+  cooldown: 0.28,
+  /** How far a gunshot is heard: pedestrians flee, wanted rises. */
+  noiseRadius: 45,
 };
 
-export const COIN = {
-  size: 24,
-  speed: 190,
-  speedPerLevel: 14,
-  interval: 1.4,
-  intervalJitter: 0.8,
-  points: 10,
+/** Wanted system. */
+export const WANTED = {
+  max: 5,
+  /** Seconds hidden (no police within this range) before losing one star. */
+  decayTime: 20,
+  hiddenRange: 60,
+  /** Wanted gained per offence. */
+  stealSeen: 1,
+  hitPedestrian: 1,
+  shooting: 1,
+  ramPolice: 1,
+  /** Fines on bust / waste. */
+  bustFine: 100,
+  wasteFine: 50,
+  /** Police cars on the street per wanted star (capped). */
+  carsPerStar: 1,
+  maxPoliceCars: 4,
+  /** On-foot officers per wanted star (capped). */
+  officersPerStar: 1,
+  maxOfficers: 3,
 };
 
-/** Seconds of play per level, and the last level: speeds and spawn rates stop growing there. */
-export const LEVEL = { seconds: 12, max: 12 };
+/** Police behaviour. */
+export const POLICE = {
+  carTopSpeed: 34,
+  carAccel: 14,
+  ramDamage: 12,
+  officerSpeed: 6.2,
+  officerDamage: 8,
+  officerHitCooldown: 0.8,
+  /** Distance at which a chase is abandoned when wanted is 0. */
+  giveUpRange: 120,
+};
 
-/** How many falling things can exist at once; the pool is allocated once, at boot. */
-export const POOL_SIZE = 64;
+/** Traffic tuning. */
+export const TRAFFIC = {
+  count: 14,
+  cruiseSpeed: 9,
+  maxSpeed: 13,
+  /** Stop if the car ahead is closer than this. */
+  followGap: 7,
+  /** How far ahead traffic looks for a car to follow. */
+  lookAhead: 16,
+};
 
+/** Pedestrian tuning. */
+export const PEDS = {
+  count: 24,
+  walkSpeed: 1.4,
+  fleeSpeed: 4.2,
+  fleeRadius: 18,
+};
+
+/** Mission rewards and timers. */
+export const MISSIONS = {
+  rewards: { m1: 200, m2: 350, m3: 400, m4: 500, m5: 1500 },
+  m2TimeLimit: 150,
+  m2Deliveries: 3,
+  m5HoldTime: 3,
+  packageValue: 50,
+  packageCount: 10,
+  startMoney: 150,
+};
+
+/** Day/night clock: game hours, 24-hour clock starting at 10:00. */
+export const CLOCK = {
+  startHour: 10,
+  /** Game hours per real second (a full day in ~4 minutes). */
+  hoursPerSecond: 0.1,
+  dayStart: 6,
+  duskStart: 17.5,
+  nightStart: 19,
+  dawnStart: 5,
+};
+
+/** Palette: daytime Solmara — warm coast, grey asphalt, pastel facades. */
 export const PALETTE = {
-  backdrop: '#11141b',
-  sky: '#1b1f2a',
-  ground: '#2a3040',
-  player: '#4fc3f7',
-  block: '#e5534b',
-  coin: '#f2c94c',
-  panel: '#252b38',
-  text: '#eef1f5',
-  muted: '#8b93a3',
+  skyDay: '#7ec8f2',
+  skyDusk: '#e88a4f',
+  skyNight: '#0b1026',
+  fogDay: '#a8c8dd',
+  fogNight: '#0b1026',
+  asphalt: '#33363b',
+  asphaltLine: '#d8c95a',
+  sidewalk: '#9a9a92',
+  grass: '#5d9b4a',
+  sand: '#e0c98f',
+  water: '#2e7fb8',
+  waterDeep: '#1b5a8a',
+  sun: '#fff2cf',
+  streetlight: '#ffd98a',
+  neonPink: '#ff4fd8',
+  neonCyan: '#37e6ff',
+  neonYellow: '#ffe14d',
+  hudText: '#eef1f5',
+  hudPanel: 'rgba(12, 16, 24, 0.72)',
+  health: '#3ddc5f',
+  wantedStar: '#ffd23d',
 };
 
-export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+/** Facade paint variants (base colour + trim) for canvas facades. */
+export const FACADE_VARIANTS = [
+  { base: '#c9a37e', trim: '#8a6b4d' },
+  { base: '#7e9cc9', trim: '#4d648a' },
+  { base: '#b8b0a4', trim: '#7d7468' },
+  { base: '#c97e7e', trim: '#8a4d4d' },
+  { base: '#8fc9a3', trim: '#4d8a68' },
+  { base: '#d8c98a', trim: '#97894d' },
+];
 
-/** Where the best score is kept between visits (this browser only). */
-export const BEST_KEY = 'block-dodger.best';
+/** Neon sign texts used around the city. */
+export const NEON_SIGNS = [
+  { text: 'SOLMARA', color: '#ff4fd8' },
+  { text: 'HOTEL', color: '#37e6ff' },
+  { text: 'CASINO', color: '#ffe14d' },
+  { text: 'BAR', color: '#ff4fd8' },
+  { text: 'PIZZA', color: '#ffe14d' },
+  { text: '24H', color: '#37e6ff' },
+];
+
+/** Save key in localStorage. */
+export const SAVE_KEY = 'solmara-save-v1';
+
+/** System font stack only — no web fonts, no network requests. */
+export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
