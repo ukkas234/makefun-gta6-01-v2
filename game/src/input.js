@@ -11,6 +11,9 @@
 // Tracked codes: WASD + arrows, Shift (run / handbrake), Space (jump /
 // handbrake in a car), E (enter/exit/steal), F (punch), Q (draw/holster),
 // M (mute), R (flip/reset car), Esc and P (pause).
+export const ACTION_CONFIRM = 1;
+export const ACTION_PAUSE = 2;
+
 export function createInput(canvas) {
   const keys = new Set();
   const justPressed = new Set();
@@ -111,6 +114,32 @@ export function createInput(canvas) {
     update() {
       mouseDX = 0;
       mouseDY = 0;
+    },
+
+    /**
+     * Compatibility helpers for the starter main loop (Block Dodger shape):
+     * takeActions() folds queued Space/Enter presses into ACTION_CONFIRM and
+     * P/Escape into ACTION_PAUSE, consuming them; direction() is -1/0/1 from
+     * A/D and the arrow keys. The Solmara main loop should prefer pressed()
+     * instead — takeActions() consumes the presses it reports, so do not mix
+     * the two for the same key in one frame.
+     */
+    takeActions() {
+      let actions = 0;
+      if (api.pressed('Space') || api.pressed('Enter')) actions |= ACTION_CONFIRM;
+      if (api.pressed('KeyP') || api.pressed('Escape')) actions |= ACTION_PAUSE;
+      if (clickQueued) {
+        clickQueued = false;
+        actions |= ACTION_CONFIRM;
+      }
+      return actions;
+    },
+
+    /** -1 for left, 1 for right, 0 for neither or both (A/D, arrows). */
+    direction() {
+      const left = keys.has('KeyA') || keys.has('ArrowLeft');
+      const right = keys.has('KeyD') || keys.has('ArrowRight');
+      return (right ? 1 : 0) - (left ? 1 : 0);
     },
 
     /** Remove all listeners (title-screen teardown / tests). */

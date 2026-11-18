@@ -144,12 +144,13 @@ export function createWorld3D(canvas) {
     const dayAngle = ((hour - 6) / 12) * Math.PI; // 0 at sunrise, PI at sunset
     const sunUp = Math.sin(dayAngle);
     if (sunUp > 0) {
+      // Sun rises in the east (+x, 06:00), noon overhead, sets west (-x, 18:00).
       const x = Math.cos(dayAngle) * 320;
       const y = Math.max(12, sunUp * 320);
       const z = 140;
-      sun.position.set(-x, y, z);
+      sun.position.set(x, y, z);
       sun.target.position.set(0, 0, 0);
-      sunDisc.position.set(-x * 1.9, Math.max(30, y * 1.9), z * 1.9);
+      sunDisc.position.set(x * 1.9, Math.max(30, y * 1.9), z * 1.9);
       sunDisc.visible = true;
       moonDisc.visible = false;
     } else {
@@ -176,19 +177,26 @@ export function createWorld3D(canvas) {
   function follow(target, dt) {
     if (!target) return;
     const inCar = !target.onFoot && target.car;
+    // In a car the player object trails the car by a frame if update() has not
+    // run yet, so follow the car's own position, not the player's stale one.
+    const px = inCar ? target.car.x : target.x;
+    const pz = inCar ? target.car.z : target.z;
     const dist = inCar ? 11 : 7.5;
     const height = inCar ? 4.6 : 3.4;
-    // Behind direction: on foot use the camera orbit yaw, in a car use heading.
-    const behindAngle = inCar ? target.heading : (target.camYaw ?? target.heading);
+    // Behind direction: on foot use the camera orbit yaw, in a car use the
+    // car's heading (the player heading trails it by a frame if update()
+    // has not run yet, so read the car directly).
+    const effHeading = inCar ? target.car.heading : target.heading;
+    const behindAngle = inCar ? target.car.heading : (target.camYaw ?? target.heading);
     const bx = Math.sin(behindAngle);
     const bz = Math.cos(behindAngle);
-    desired.set(target.x - bx * dist, height, target.z - bz * dist);
+    desired.set(px - bx * dist, height, pz - bz * dist);
     const smooth = 1 - Math.exp(-6 * Math.max(dt, 0.001));
     camera.position.lerp(desired, smooth);
     // Look a little ahead of the target in its facing direction.
-    const fx = Math.sin(target.heading);
-    const fz = Math.cos(target.heading);
-    lookTarget.set(target.x + fx * 4, inCar ? 1.2 : 1.4, target.z + fz * 4);
+    const fx = Math.sin(effHeading);
+    const fz = Math.cos(effHeading);
+    lookTarget.set(px + fx * 4, inCar ? 1.2 : 1.4, pz + fz * 4);
     camera.lookAt(lookTarget);
   }
 

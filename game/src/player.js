@@ -12,15 +12,15 @@
 // (renderer shadows stay off). While driving (onFoot === false, car set) the
 // mesh is hidden and x/z follow the car; the main loop drives the car.
 import * as THREE from '../vendor/three.module.js';
+import { PISTOL, PLAYER } from './config.js';
 
-const WALK_SPEED = 5;
-const RUN_SPEED = 9;
-const ACCEL = 40;
-const JUMP_SPEED = 8.5;
-const GRAVITY = 22;
-const RADIUS = 0.45;
-const PUNCH_TIME = 0.35;
-const PUNCH_RANGE = 1.6;
+const WALK_SPEED = PLAYER.walkSpeed;
+const RUN_SPEED = PLAYER.runSpeed;
+const JUMP_SPEED = PLAYER.jumpSpeed;
+const GRAVITY = PLAYER.gravity;
+const RADIUS = PLAYER.radius;
+const PUNCH_TIME = PLAYER.punchCooldown;
+const PUNCH_RANGE = PLAYER.punchRange;
 const CITY_LIMIT = 258;
 
 function angleLerp(a, b, t) {
@@ -104,7 +104,7 @@ export function createPlayer(scene, city) {
     y: 0,
     heading: 0,
     speed: 0,
-    health: 100,
+    health: PLAYER.maxHealth,
     onFoot: true,
     car: null,
     // Camera orbit (mouse drag) and combat state, read by render/main.
@@ -123,6 +123,7 @@ export function createPlayer(scene, city) {
   let grounded = true;
   let walkPhase = 0;
   let punchTimer = 0;
+  let shootTimer = 0;
   let flashTimer = 0;
   let hurtTimer = 0;
 
@@ -189,8 +190,13 @@ export function createPlayer(scene, city) {
       // --- Left click: shoot when armed, punch when unarmed ---
       if (input.consumeClick && input.consumeClick()) {
         if (player.armed) {
-          player.justFired = true;
-          flashTimer = 0.07;
+          // Pistol rate limit from config; extra clicks inside the cooldown
+          // are dropped, not queued.
+          if (shootTimer <= 0) {
+            player.justFired = true;
+            shootTimer = PISTOL.cooldown;
+            flashTimer = 0.07;
+          }
         } else if (punchTimer <= 0) {
           punchTimer = PUNCH_TIME;
           player.justPunched = true;
@@ -204,6 +210,7 @@ export function createPlayer(scene, city) {
     }
     player.punchActive = punchTimer > PUNCH_TIME - 0.15 && punchTimer > 0;
     if (punchTimer > 0) punchTimer -= dt;
+    if (shootTimer > 0) shootTimer -= dt;
     if (flashTimer > 0) flashTimer -= dt;
     if (hurtTimer > 0) hurtTimer -= dt;
 
@@ -233,9 +240,11 @@ export function createPlayer(scene, city) {
     const running = input && input.keys
       && (input.keys.has('ShiftLeft') || input.keys.has('ShiftRight'));
     const targetSpeed = moving ? (running ? RUN_SPEED : WALK_SPEED) : 0;
-    const accel = 1 - Math.exp(-ACCEL * dt / Math.max(targetSpeed, 1) * 8);
-    vx += (mx * targetSpeed - vx) * Math.min(1, accel + 8 * dt);
-    vz += (mz * targetSpeed - vz) * Math.min(1, accel + 8 * dt);
+    // Exponential approach to the target velocity: smooth starts/stops,
+    // frame-rate independent.
+    const k = 1 - Math.exp(-10 * dt);
+    vx += (mx * targetSpeed - vx) * k;
+    vz += (mz * targetSpeed - vz) * k;
     player.speed = Math.hypot(vx, vz);
     tryMove(player.x + vx * dt, player.z + vz * dt);
 
