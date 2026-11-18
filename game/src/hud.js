@@ -128,13 +128,13 @@ export function createHUD() {
     dot(map && map.pedestrians, '#9aa3ad', 1.5);
     dot(map && map.cars, '#e8e8e8', 2.5);
     dot(map && map.police, '#3fa9ff', 3);
-    // Player: white triangle rotated by heading (heading 0 = facing north, -z).
+    // Player: white triangle rotated by heading (heading 0 = facing south, +z).
     if (map && map.player) {
       const [px, py] = toMap(map.player.x, map.player.z);
       const heading = map.player.heading || 0;
       ctx.save();
       ctx.translate(px, py);
-      ctx.rotate(-heading);
+      ctx.rotate(Math.PI - heading);
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 1;
