@@ -728,6 +728,8 @@ function runGame() {
 // ---------------------------------------------------------------- shot mode
 function runShot(name) {
   const staged = stageShot(name, game);
+  // stageShot sets the world's time of day; sync the HUD clock to it.
+  clock = world.timeOfDay;
   setScreen(staged.screen);
   if (staged.screen === 'title') refreshMissionLists();
   // Settle the chase camera behind the player/car, then paint twice.
@@ -737,8 +739,18 @@ function runShot(name) {
     world.update(0);
     hud.update(hudState());
     painted += 1;
-    if (painted < 2) requestAnimationFrame(paint);
-    else window.__shotReady = true;
+    if (painted < 2) {
+      requestAnimationFrame(paint);
+    } else {
+      window.__shotReady = true;
+      // Keep repainting (render only, no simulation): a WebGL canvas does
+      // not preserve its drawing buffer, so a screenshot taken after the
+      // flag needs a freshly presented frame to capture.
+      requestAnimationFrame(function repaint() {
+        world.update(0);
+        requestAnimationFrame(repaint);
+      });
+    }
   }
   requestAnimationFrame(paint);
 }

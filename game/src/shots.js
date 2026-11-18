@@ -46,7 +46,7 @@ function putPlayerOnFoot(game, x, z, heading) {
  * 'play' for the rest. Unknown names fall back to 'start'.
  */
 export function stageShot(name, game) {
-  const { player, world, police, traffic, hud, missions } = game;
+  const { player, world, police, traffic, hud } = game;
 
   // Common reset: a clean, deterministic base for every shot.
   police.reset();
@@ -95,6 +95,25 @@ export function stageShot(name, game) {
     for (let i = 0; i < 240; i += 1) {
       police.update(1 / 60, player, traffic.cars);
       traffic.update(1 / 60, player);
+    }
+    // The chase comes from behind, so the cops sit behind the camera and
+    // would be invisible. Pull the furthest unit around to cut the player
+    // off ahead, facing the camera, light bar on the roof in full view.
+    if (police.cars.length > 0) {
+      let furthest = police.cars[0];
+      for (const car of police.cars) {
+        if (Math.hypot(car.x - player.x, car.z - player.z)
+          > Math.hypot(furthest.x - player.x, furthest.z - player.z)) furthest = car;
+      }
+      // Keep it ON the player's road, 30 m ahead, facing the player:
+      // x = player.x stays on the north-south road; an off-road offset
+      // would hide it inside a building block.
+      furthest.x = player.x;
+      furthest.z = player.z - 30;
+      furthest.heading = Math.atan2(player.x - furthest.x, player.z - furthest.z);
+      furthest.speed = 0;
+      furthest.mesh.position.set(furthest.x, 0, furthest.z);
+      furthest.mesh.rotation.y = furthest.heading;
     }
     hud.setObjective('Lose the cops — get to 0 stars');
     hud.showMessage('3 stars! The whole department is on you.');
