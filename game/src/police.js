@@ -114,6 +114,12 @@ export function createPolice(scene, city, random) {
     decayTimer: 0,
     bustTimer: 0,
     flashTime: 0,
+    // After the player outruns the police and a unit despawns for distance,
+    // no fresh unit spawns for this long. Without this grace period a new
+    // car would appear next to the player immediately and the wanted level
+    // could never decay (spec: -1 star per 20 s while no cop is within 60 m,
+    // which mission M3 "Lose the Heat" depends on).
+    spawnCooldown: 0,
   };
 
   function roadPointNear(x, z, dist) {
@@ -141,7 +147,9 @@ export function createPolice(scene, city, random) {
   }
 
   function spawnPoliceCar(player) {
-    const spot = roadPointNear(player.x, player.z, 45 + rnd() * 25);
+    // Spawn a good way off (80-110 m) so a fresh unit does not instantly
+    // cancel the "hidden" range that lets the wanted level decay.
+    const spot = roadPointNear(player.x, player.z, 80 + rnd() * 30);
     const heading = Math.atan2(player.x - spot.x, player.z - spot.z);
     const car = createCar('sedan', spot.x, spot.z, heading, 0x14181d);
     car.isPolice = true;
@@ -182,12 +190,15 @@ export function createPolice(scene, city, random) {
   function addWanted(n) {
     state.wanted = Math.max(0, Math.min(MAX_WANTED, state.wanted + n));
     state.decayTimer = 0;
+    // Fresh heat brings an immediate response.
+    state.spawnCooldown = 0;
   }
 
   function reset() {
     state.wanted = 0;
     state.decayTimer = 0;
     state.bustTimer = 0;
+    state.spawnCooldown = 0;
     while (state.cars.length) removeCar(state.cars[0]);
     while (state.cops.length) removeCop(state.cops[0]);
   }
@@ -202,6 +213,7 @@ export function createPolice(scene, city, random) {
   function update(dt, player, cars) {
     dt = Math.min(dt, 0.05);
     state.flashTime += dt;
+    state.spawnCooldown = Math.max(0, state.spawnCooldown - dt);
     let busted = false;
 
     // Wanted decay: one star per 20 s while no cop is within 60 m.
@@ -217,13 +229,18 @@ export function createPolice(scene, city, random) {
       }
     }
 
-    // Match the number of police cars to the wanted level (max 5 cars).
-    while (state.cars.length < state.wanted) spawnPoliceCar(player);
+    // Match the number of police cars to the wanted level (max 5 cars),
+    // unless the player just lost the police and the grace period is running.
+    if (state.spawnCooldown <= 0) {
+      while (state.cars.length < state.wanted) spawnPoliceCar(player);
+    }
     while (state.cars.length > state.wanted) removeCar(state.cars[state.cars.length - 1]);
 
     // On-foot officers: only while the player is on foot and wanted.
     const wantCops = player.onFoot && state.wanted > 0 ? Math.min(state.wanted, 3) : 0;
-    while (state.cops.length < wantCops) spawnCop(player);
+    if (state.spawnCooldown <= 0) {
+      while (state.cops.length < wantCops) spawnCop(player);
+    }
     while (state.cops.length > wantCops) removeCop(state.cops[state.cops.length - 1]);
 
     // Flash the light bars: red and blue alternate twice a second.
@@ -236,6 +253,16 @@ export function createPolice(scene, city, random) {
 
     // Police cars: chase the player, ram the player's car, avoid traffic.
     for (const car of [...state.cars]) {
+      const pdx = player.x - car.x;
+      const pdz = player.z - car.z;
+      const pdist = Math.hypot(pdx, pdz);
+      // Lost them: a car that falls more than 160 m behind gives up, and
+      // the grace period starts so the player can actually lose the heat.
+      if (pdist > 160) {
+        state.spawnCooldown = Math.max(state.spawnCooldown, 20);
+        removeCar(car);
+        continue;
+      }
       car.ramCooldown = Math.max(0, (car.ramCooldown || 0) - dt);
       const dx = player.x - car.x;
       const dz = player.z - car.z;
@@ -311,6 +338,7 @@ export function createPolice(scene, city, random) {
       const dist = Math.hypot(dx, dz);
       closestCop = Math.min(closestCop, dist);
       if (dist > 120) {
+        state.spawnCooldown = Math.max(state.spawnCooldown, 20);
         removeCop(cop);
         continue;
       }

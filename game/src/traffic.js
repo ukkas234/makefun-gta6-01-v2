@@ -55,7 +55,14 @@ export function createTraffic(scene, city, count, random) {
   }
 
   function spawnCar() {
-    const spot = randomRoadSpot(25);
+    let spot = randomRoadSpot(25);
+    // Keep spawns spread out: a car dropped on top of another one jams the
+    // whole lane, because every car behind it stops for the car ahead.
+    for (let tries = 0; tries < 12; tries += 1) {
+      const clash = cars.some((other) => Math.hypot(other.x - spot.x, other.z - spot.z) < 14);
+      if (!clash) break;
+      spot = randomRoadSpot(25);
+    }
     const dir = rnd() < 0.5 ? -1 : 1;
     const type = pick(TRAFFIC_TYPES, rnd);
     const color = type === 'taxi' ? 0xf7c948 : pick(TRAFFIC_COLORS, rnd);
